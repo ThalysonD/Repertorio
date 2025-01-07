@@ -28,12 +28,23 @@ export const songs: Song[] = [
     originalKey: 'A',
     duration: 410,
     url: '/songs/ATerraClama.m4a'
+  },
+  {
+    id: '5',
+    title: 'ISAIAS SAAD FEAT. JOHN DIAS - ÁGUAS PURIFICADORAS OCEANOS',
+    originalKey: 'E',
+    duration: 410,
+    url: '/songs/aguaspurificadoras.m4a'
   }
 ];
 
 export const repertoires: Repertoire[] = [
   {
     date: '2025-01-11',
-    songs: [songs[0], songs[1], songs[2]]
+    songs: [songs[0], songs[1], songs[2], songs[3]]
+  },
+  {
+    date: '2025-01-09',
+    songs: [songs[4]]
   }
 ];
