@@ -25,9 +25,7 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
     const setupAudio = async () => {
       try {
         // Pré-inicializa o contexto de áudio
-        if (Tone.context.state !== 'running') {
-          await Tone.context.resume();
-        }
+        await Tone.start();
 
         const newPitchShift = new Tone.PitchShift().toDestination();
         const newPlayer = new Tone.Player({
@@ -65,9 +63,7 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
 
     try {
       // Garante que o contexto de áudio está ativo
-      if (Tone.context.state !== 'running') {
-        await Tone.context.resume();
-      }
+      await Tone.start();
 
       if (player.state === 'started') {
         setCurrentPosition(player.immediate());
@@ -86,9 +82,7 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
     if (!player || !isLoaded) return;
 
     try {
-      if (Tone.context.state !== 'running') {
-        await Tone.context.resume();
-      }
+      await Tone.start();
 
       if (player.state === 'started') {
         player.stop();
@@ -102,19 +96,19 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
     }
   }, [player, isLoaded]);
 
-  const adjustPitch = (semitones: number) => {
+  const adjustPitch = useCallback((semitones: number) => {
     if (!pitchShift) return;
     const newPitch = Math.max(-12, Math.min(12, pitch + semitones));
     setPitch(newPitch);
     pitchShift.pitch = newPitch;
-  };
+  }, [pitch, pitchShift]);
 
-  const getAdjustedKey = () => {
+  const getAdjustedKey = useCallback(() => {
     const notes = ['C', 'C#', 'D', 'D#', 'E', 'F', 'F#', 'G', 'G#', 'A', 'A#', 'B'];
     const originalIndex = notes.indexOf(song.originalKey);
     const adjustedIndex = (originalIndex + pitch + 12) % 12;
     return notes[adjustedIndex];
-  };
+  }, [song.originalKey, pitch]);
 
   return (
     <div className={`${darkMode ? 'bg-gray-800 text-white' : 'bg-white text-gray-900'
@@ -135,7 +129,7 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
               onClick={togglePlay}
               disabled={!isLoaded}
               className={`p-2 rounded-full touch-manipulation ${isLoaded
-                  ? 'bg-blue-500 text-white active:bg-blue-700'
+                  ? 'bg-blue-500 text-white active:bg-blue-700 hover:bg-blue-600'
                   : 'bg-gray-300 text-gray-500'
                 }`}
             >
@@ -146,7 +140,7 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
               onClick={restart}
               disabled={!isLoaded}
               className={`p-2 rounded-full touch-manipulation ${isLoaded
-                  ? 'bg-green-500 text-white active:bg-green-700'
+                  ? 'bg-green-500 text-white active:bg-green-700 hover:bg-green-600'
                   : 'bg-gray-300 text-gray-500'
                 }`}
             >
