@@ -5,3 +5,8 @@ export interface Song {
   url: string;
   minister?: string;
 }
+
+export interface Repertoire {
+  date: string;
+  songs: Song[];
+}
