@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import * as Tone from 'tone';
 import { Play, Pause, Plus, Minus, RotateCcw, User } from 'lucide-react';
 import { Song } from '../types';
@@ -18,22 +18,40 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
   const [minister, setMinister] = useState(song.minister || '');
   const [isEditingMinister, setIsEditingMinister] = useState(false);
 
+  // Inicialização otimizada do Tone.js
   useEffect(() => {
-    const initAudio = async () => {
-      await Tone.start();
-      const newPitchShift = new Tone.PitchShift().toDestination();
-      const newPlayer = new Tone.Player({
-        url: song.url,
-        onload: () => setIsLoaded(true),
-      }).connect(newPitchShift);
+    let mounted = true;
 
-      setPlayer(newPlayer);
-      setPitchShift(newPitchShift);
+    const setupAudio = async () => {
+      try {
+        // Pré-inicializa o contexto de áudio
+        if (Tone.context.state !== 'running') {
+          await Tone.context.resume();
+        }
+
+        const newPitchShift = new Tone.PitchShift().toDestination();
+        const newPlayer = new Tone.Player({
+          url: song.url,
+          onload: () => {
+            if (mounted) {
+              setIsLoaded(true);
+            }
+          },
+        }).connect(newPitchShift);
+
+        if (mounted) {
+          setPlayer(newPlayer);
+          setPitchShift(newPitchShift);
+        }
+      } catch (error) {
+        console.error('Erro ao configurar áudio:', error);
+      }
     };
 
-    initAudio();
+    setupAudio();
 
     return () => {
+      mounted = false;
       if (player?.state === 'started') {
         player.stop();
       }
@@ -42,42 +60,47 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
     };
   }, [song.url]);
 
-  const togglePlay = async () => {
+  const togglePlay = useCallback(async () => {
     if (!player || !isLoaded) return;
 
     try {
-      await Tone.start();
+      // Garante que o contexto de áudio está ativo
+      if (Tone.context.state !== 'running') {
+        await Tone.context.resume();
+      }
 
       if (player.state === 'started') {
         setCurrentPosition(player.immediate());
         player.stop();
         setIsPlaying(false);
       } else {
-        player.start(undefined, currentPosition);
+        await player.start(undefined, currentPosition);
         setIsPlaying(true);
       }
     } catch (error) {
       console.error('Erro ao reproduzir áudio:', error);
     }
-  };
+  }, [player, isLoaded, currentPosition]);
 
-  const restart = async () => {
+  const restart = useCallback(async () => {
     if (!player || !isLoaded) return;
 
     try {
-      await Tone.start();
-      setCurrentPosition(0);
+      if (Tone.context.state !== 'running') {
+        await Tone.context.resume();
+      }
 
       if (player.state === 'started') {
         player.stop();
       }
 
-      player.start();
+      setCurrentPosition(0);
+      await player.start(undefined, 0);
       setIsPlaying(true);
     } catch (error) {
       console.error('Erro ao reiniciar áudio:', error);
     }
-  };
+  }, [player, isLoaded]);
 
   const adjustPitch = (semitones: number) => {
     if (!pitchShift) return;
@@ -111,9 +134,9 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
             <button
               onClick={togglePlay}
               disabled={!isLoaded}
-              className={`p-2 rounded-full ${isLoaded
-                  ? 'bg-blue-500 text-white hover:bg-blue-600 active:bg-blue-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              className={`p-2 rounded-full touch-manipulation ${isLoaded
+                  ? 'bg-blue-500 text-white active:bg-blue-700'
+                  : 'bg-gray-300 text-gray-500'
                 }`}
             >
               {isPlaying ? <Pause size={24} /> : <Play size={24} />}
@@ -122,9 +145,9 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
             <button
               onClick={restart}
               disabled={!isLoaded}
-              className={`p-2 rounded-full ${isLoaded
-                  ? 'bg-green-500 text-white hover:bg-green-600 active:bg-green-700'
-                  : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+              className={`p-2 rounded-full touch-manipulation ${isLoaded
+                  ? 'bg-green-500 text-white active:bg-green-700'
+                  : 'bg-gray-300 text-gray-500'
                 }`}
             >
               <RotateCcw size={24} />
@@ -134,8 +157,8 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
           <div className="flex items-center space-x-4">
             <button
               onClick={() => adjustPitch(-1)}
-              className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-                } p-2 rounded-full active:scale-95 transition-transform`}
+              className={`${darkMode ? 'bg-gray-700 active:bg-gray-600' : 'bg-gray-200 active:bg-gray-300'
+                } p-2 rounded-full touch-manipulation`}
             >
               <Minus size={20} />
             </button>
@@ -144,8 +167,8 @@ export default function AudioPlayer({ song, darkMode }: AudioPlayerProps) {
 
             <button
               onClick={() => adjustPitch(1)}
-              className={`${darkMode ? 'bg-gray-700 hover:bg-gray-600' : 'bg-gray-200 hover:bg-gray-300'
-                } p-2 rounded-full active:scale-95 transition-transform`}
+              className={`${darkMode ? 'bg-gray-700 active:bg-gray-600' : 'bg-gray-200 active:bg-gray-300'
+                } p-2 rounded-full touch-manipulation`}
             >
               <Plus size={20} />
             </button>
